@@ -8,6 +8,7 @@ import club.redux.sunset.lavafishing.client.model.ModelBullet
 import club.redux.sunset.lavafishing.client.particle.ParticleFirePunch
 import club.redux.sunset.lavafishing.client.renderer.blockentity.BlockEntityRendererPrometheusBounty
 import club.redux.sunset.lavafishing.client.renderer.entity.EntityRendererBullet
+import club.redux.sunset.lavafishing.datagenerator.ModItemModelProvider
 import club.redux.sunset.lavafishing.datagenerator.ModItemTagProvider
 import club.redux.sunset.lavafishing.datagenerator.ModRecipeProvider
 import club.redux.sunset.lavafishing.effect.EffectEndlessFlame
@@ -18,6 +19,7 @@ import club.redux.sunset.lavafishing.loot.LootTableHandler
 import club.redux.sunset.lavafishing.registry.ModItems
 import club.redux.sunset.lavafishing.registry.ModParticleTypes
 import club.redux.sunset.lavafishing.registry.ModPotions
+import com.teammetallurgy.aquaculture.client.ClientHandler
 import net.minecraft.client.Minecraft
 import net.minecraft.client.particle.SpriteSet
 import net.minecraft.data.tags.TagsProvider
@@ -32,6 +34,7 @@ import net.minecraftforge.event.entity.EntityJoinLevelEvent
 import net.minecraftforge.event.entity.living.LivingAttackEvent
 import net.minecraftforge.event.entity.living.LivingDamageEvent
 import net.minecraftforge.event.entity.living.LivingEvent.LivingTickEvent
+import net.minecraftforge.event.entity.player.ItemTooltipEvent
 import net.minecraftforge.event.entity.player.PlayerEvent.BreakSpeed
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber
@@ -40,8 +43,8 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent
 import java.util.concurrent.CompletableFuture
 
 class EventHandler {
-    @EventBusSubscriber
-    object ForgeEvent {
+    @EventBusSubscriber(modid = BuildConstants.MOD_ID, bus = EventBusSubscriber.Bus.FORGE)
+    object ForgeEventBoth {
         @SubscribeEvent
         fun onEntityDamage(event: LivingDamageEvent) {
             EffectEndlessFlame.onEntityDamage(event)
@@ -79,6 +82,14 @@ class EventHandler {
         }
     }
 
+    @EventBusSubscriber(modid = BuildConstants.MOD_ID, bus = EventBusSubscriber.Bus.FORGE, value = [Dist.CLIENT])
+    object ForgeEventClient {
+        @SubscribeEvent
+        fun onItemTooltip(event: ItemTooltipEvent) {
+            ModTooltip.onItemTooltip(event)
+        }
+    }
+
     @EventBusSubscriber(modid = BuildConstants.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
     object ModEventBoth {
         @SubscribeEvent
@@ -101,15 +112,18 @@ class EventHandler {
                         event.existingFileHelper
                     )
                 )
+                addProvider(event.includeClient(), ModItemModelProvider(packOutput, event.existingFileHelper))
             }
         }
     }
 
     @EventBusSubscriber(modid = BuildConstants.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = [Dist.CLIENT])
     object ModEventClient {
+
         @SubscribeEvent
         fun onClientSetup(event: FMLClientSetupEvent) {
             ItemSlingshot.onClientSetup(event)
+            event.enqueueWork { ClientHandler.registerFishingRodModelProperties(ModItems.OBSIDIAN_FISHING_ROD.get()) }
         }
 
         @SubscribeEvent
